@@ -1,19 +1,28 @@
 package se.su.inlupp;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class ListGraph<T> implements Graph<T> {
 
+  private Map<T, Set<Edge>> nodes = new HashMap<>();
   @Override
   public void add(T node) {
-    throw new UnsupportedOperationException("Unimplemented method 'add'");
+    nodes.putIfAbsent(node, new HashSet<>());
   }
 
   @Override
   public void connect(T node1, T node2, String name, int weight) {
-    throw new UnsupportedOperationException("Unimplemented method 'connect'");
+    add(node1);
+    add(node2);
+    Set<Edge> fromNode = nodes.get(node1);
+    Set<Edge> toNode = nodes.get(node2);
+
+    fromNode.add(new Edge(weight, node2, name));
+    toNode.add(new Edge(weight, node1, name));
+
+    nodes.put(node1, fromNode);
+    nodes.put(node2, toNode);
+
   }
 
   @Override
@@ -23,7 +32,7 @@ public class ListGraph<T> implements Graph<T> {
 
   @Override
   public Set<T> getNodes() {
-    throw new UnsupportedOperationException("Unimplemented method 'getNodes'");
+    return Collections.unmodifiableSet(nodes.keySet());
   }
 
   @Override
