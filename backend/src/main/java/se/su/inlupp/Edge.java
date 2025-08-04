@@ -16,8 +16,8 @@ public class Edge<T> {
     return weight;
   }
 
-  public void setWeight(int weight){
-    if(weight < 0){
+  public void setWeight(int weight) {
+    if (weight < 0) {
       throw new IllegalArgumentException("Weight cannot be negative");
     }
     this.weight = weight;
@@ -29,5 +29,9 @@ public class Edge<T> {
 
   public String getName(){
     return name;
+  }
+
+  public String toString(){
+    return "till " + getDestination() + " med " + getName() + " tar 3 ";
   }
 }

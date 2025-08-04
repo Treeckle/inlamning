@@ -57,7 +57,7 @@ public class ListGraph<T> implements Graph<T> {
         e.setWeight(weight);
       }
     }
-    }
+  }
 
   @Override
   public Set<T> getNodes() {
@@ -115,11 +115,70 @@ public class ListGraph<T> implements Graph<T> {
 
   @Override
   public boolean pathExists(T from, T to) {
-    throw new UnsupportedOperationException("Unimplemented method 'pathExists'");
+    if(!nodes.containsKey(from) || !nodes.containsKey(to)) return false;
+    Set<T> visited = new HashSet<>();
+    recursiveVisitDFS(from, visited);
+    return visited.contains(to);
   }
 
   @Override
   public List<Edge<T>> getPath(T from, T to) {
-    throw new UnsupportedOperationException("Unimplemented method 'getPath'");
+    if(!pathExists(from, to)) return null;
+    List<T> visited = new LinkedList<>();
+    List<Edge<T>> path = new ArrayList<>();
+    LinkedList<T> queue = new LinkedList<>();
+    queue.add(from);
+
+    //find a path
+    while (!queue.isEmpty()) {
+
+      T current = queue.poll();
+      visited.add(current);
+      if (current.equals(to)) {
+        System.out.println("found path");
+        break;
+      }
+      for (Edge<T> e : nodes.get(current)) {
+        if (!visited.contains(e.getDestination())) {
+          queue.add(e.getDestination());
+        }
+      }
+    }
+
+    //replicate path to save it
+    while(to != from){
+      for(T node : visited){
+        if (getEdgeBetween(node, to) != null){
+          path.add(getEdgeBetween(node, to));
+          to = node;
+          break;
+        }
+      }
+    }
+    path = path.reversed();
+    return path;
+
+  }
+
+  public String toString(){
+    String fullString = "";
+    for(T node : nodes.keySet()){
+      fullString += node.toString() + "\n";
+      for(Edge<T> e : nodes.get(node)){
+        fullString += "     " + e.toString() + "\n";
+      }
+    }
+    return fullString;
+  }
+
+  //hjälpmetoder
+  private void recursiveVisitDFS(T node, Set<T> visited) {
+    visited.add(node);
+    for (Edge<T> e : nodes.get(node)) {
+      if (!visited.contains(e.getDestination())) {
+        recursiveVisitDFS(e.getDestination(), visited);
+      }
+    }
   }
 }
+
