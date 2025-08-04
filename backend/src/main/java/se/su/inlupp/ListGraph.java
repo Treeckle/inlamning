@@ -155,7 +155,7 @@ public class ListGraph<T> implements Graph<T> {
         }
       }
     }
-    path = path.reversed();
+    Collections.reverse(path);
     return path;
 
   }
