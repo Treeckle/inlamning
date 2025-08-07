@@ -29,39 +29,7 @@ public class Gui extends Application {
 
     stage.setTitle("Test title <3 uwu o3o owo");
     Pane root = new Pane();
-    Label nameLabel = new Label("Name: ");
-    TextField nameField = new TextField();
-    Button addButton = new Button("Add");
-    Label output = new Label();
-
-
-    root.getChildren().add(nameLabel);
-    root.getChildren().add(nameField);
-    root.getChildren().add(addButton);
-    root.getChildren().add(output);
-
-    output.textProperty().bind(nameField.textProperty());
-
-    addButton.setOnAction(e -> {
-      String name = nameField.getText();
-      output.setText(name);
-    });
-    /*addButton.setOnAction(new EventHandler<ActionEvent>() {
-      @Override
-      public void handle(ActionEvent actionEvent) {
-        String name = nameField.getText();
-        output.setText("Hej " + name + "!" );
-      }
-    });*/
-
-
-    Scene scene = new Scene(root, 300, 300);
-
-    nameField.setPrefWidth(50);
-    nameLabel.relocate(0, 100);
-    nameField.relocate(100, 100);
-    addButton.relocate(200, 100);
-    output.relocate(150, 200);
+    Scene scene = new Scene(root, 1920, 1080);
     stage.setScene(scene);
     stage.show();
   }
