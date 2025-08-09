@@ -10,17 +10,24 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
 public class Gui extends Application {
 
+  private boolean placingLocation = true;
+  private int nodeRadius = 10;
+  private HashMap<Circle, Location> locations = new HashMap<>();
+  private ArrayList<Circle> selectedPlaces = new ArrayList<>();
+
   public void start(Stage stage) {
-    Graph<String> graph = new ListGraph<String>();
+    Graph<Location> graph = new ListGraph<Location>();
     stage.setResizable(false);
 
     /*String javaVersion = System.getProperty("java.version");
@@ -99,6 +106,29 @@ public class Gui extends Application {
     stage.show();
     System.out.println("Working directory: " + System.getProperty("user.dir"));
 
+    //addPlace
+
+    mapHolder.setOnMouseClicked(event -> {
+      if(placingLocation) {
+        TextInputDialog nameInput = new TextInputDialog("ligma");
+        nameInput.setTitle("Name Input");
+        nameInput.setContentText("Enter a name for the place");
+        nameInput.showAndWait();
+        String name = nameInput.getResult();
+        Location place = new Location(name, event.getX(), event.getY());
+        graph.add(place);
+        System.out.println(graph.getNodes());
+        Circle circle = new Circle(event.getX(), event.getY(), nodeRadius, Color.BLUE);
+        locations.putIfAbsent(circle, place);
+        circle.setOnMouseClicked(mouseEvent -> {
+          if(selectedPlaces.size()<2) {
+            circle.setFill(Color.RED);
+            selectedPlaces.add(circle);
+          }
+        });
+        mapHolder.getChildren().add(circle);
+      }
+    });
 
 
   }
@@ -106,4 +136,10 @@ public class Gui extends Application {
   public static void main(String[] args) {
     launch(args);
   }
+  //add function
+//  private void addPlace(String name, double x, double y) {
+//    Location loc = new Location(name, x, y);
+//    graph.add(loc);
+//  }
+
 }
