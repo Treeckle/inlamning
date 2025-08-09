@@ -69,7 +69,6 @@ public class Gui extends Application {
       m.setOnAction(event -> {
         mapHolder.setBackground(new Background(new BackgroundImage(templates.get(m), BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT, BackgroundPosition.CENTER, BackgroundSize.DEFAULT)));
         mapHolder.setPrefSize(templates.get(m).getWidth(), templates.get(m).getHeight());
-        System.out.println("joe mama");
         stage.sizeToScene();
       });
     }
