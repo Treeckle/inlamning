@@ -11,18 +11,17 @@ import javafx.scene.image.Image;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Line;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.*;
 
 public class Gui extends Application {
 
-  private boolean placingLocation = true;
-  private int nodeRadius = 10;
+  private boolean placingLocation = false;
+  private final int nodeRadius = 10;
+  private final int connectionWidth = 2;
   private HashMap<Circle, Location> locations = new HashMap<>();
   private ArrayList<Circle> selectedPlaces = new ArrayList<>();
 
@@ -67,7 +66,7 @@ public class Gui extends Application {
 
 
     menu.getItems().addAll(maps, open, save, saveImage, exit);
-    maps.getItems().addAll(skyrim, borderlands2);
+    maps.getItems().addAll(customMap, skyrim, borderlands2);
     menuBar.getMenus().add(menu);
 
     //function for menu buttons
@@ -108,38 +107,68 @@ public class Gui extends Application {
 
     //addPlace
 
+    newPlace.setOnAction(event -> {
+      placingLocation = true;
+    });
+
+    //sätt ut plats på klickade kordinater
     mapHolder.setOnMouseClicked(event -> {
       if(placingLocation) {
-        TextInputDialog nameInput = new TextInputDialog("ligma");
+        placingLocation = false;
+        TextInputDialog nameInput = new TextInputDialog();
         nameInput.setTitle("Name Input");
         nameInput.setContentText("Enter a name for the place");
-        nameInput.showAndWait();
+        Optional<String> result = nameInput.showAndWait();
+        if(result.isEmpty()) return;
         String name = nameInput.getResult();
         Location place = new Location(name, event.getX(), event.getY());
         graph.add(place);
         System.out.println(graph.getNodes());
         Circle circle = new Circle(event.getX(), event.getY(), nodeRadius, Color.BLUE);
         locations.putIfAbsent(circle, place);
+
         circle.setOnMouseClicked(mouseEvent -> {
-          if(selectedPlaces.size()<2) {
-            circle.setFill(Color.RED);
-            selectedPlaces.add(circle);
-          }
+        selectCircle(circle);
         });
         mapHolder.getChildren().add(circle);
       }
     });
 
+        newConnection.setOnAction(event -> {
+          if(selectedPlaces.size() < 2) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setContentText("Please select at least two places");
+            alert.showAndWait();
+            return;
+          }
+          Location place1 = locations.get(selectedPlaces.get(0));
+          Location place2 = locations.get(selectedPlaces.get(1));
 
+          String name = "joe";
+
+          int weight = 5;
+          graph.connect(locations.get(selectedPlaces.get(0)), locations.get(selectedPlaces.get(1)), name, weight);
+
+          Line connection = new Line(place1.getXPos(), place1.getYPos(), place2.getXPos(), place2.getYPos());
+          connection.setStrokeWidth(connectionWidth);
+          mapHolder.getChildren().add(connection);
+          connection.toBack();
+
+        });
+  }
+  private void selectCircle(Circle c){
+    if (selectedPlaces.contains(c)) {
+      c.setFill(Color.BLUE);
+      selectedPlaces.remove(c);
+    }
+    else if(selectedPlaces.size()<2) {
+      c.setFill(Color.RED);
+      selectedPlaces.add(c);
+    }
   }
 
   public static void main(String[] args) {
     launch(args);
   }
-  //add function
-//  private void addPlace(String name, double x, double y) {
-//    Location loc = new Location(name, x, y);
-//    graph.add(loc);
-//  }
-
 }
