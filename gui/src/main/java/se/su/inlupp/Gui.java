@@ -108,6 +108,9 @@ public class Gui extends Application {
     //addPlace
 
     newPlace.setOnAction(event -> {
+      MultiTextInputDialog dialog = new MultiTextInputDialog();
+      dialog.showAndWait();
+
       placingLocation = true;
     });
 
@@ -134,28 +137,29 @@ public class Gui extends Application {
       }
     });
 
-        newConnection.setOnAction(event -> {
-          if(selectedPlaces.size() < 2) {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("Error");
-            alert.setContentText("Please select at least two places");
-            alert.showAndWait();
-            return;
-          }
-          Location place1 = locations.get(selectedPlaces.get(0));
-          Location place2 = locations.get(selectedPlaces.get(1));
+    //set connection
+    newConnection.setOnAction(event -> {
+      if(selectedPlaces.size() < 2) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Error");
+        alert.setContentText("Please select at least two places");
+        alert.showAndWait();
+        return;
+      }
+      Location place1 = locations.get(selectedPlaces.get(0));
+      Location place2 = locations.get(selectedPlaces.get(1));
 
-          String name = "joe";
+      String name = "joe";
 
-          int weight = 5;
-          graph.connect(locations.get(selectedPlaces.get(0)), locations.get(selectedPlaces.get(1)), name, weight);
+      int weight = 5;
+      graph.connect(locations.get(selectedPlaces.get(0)), locations.get(selectedPlaces.get(1)), name, weight);
 
-          Line connection = new Line(place1.getXPos(), place1.getYPos(), place2.getXPos(), place2.getYPos());
-          connection.setStrokeWidth(connectionWidth);
-          mapHolder.getChildren().add(connection);
-          connection.toBack();
+      Line connection = new Line(place1.getXPos(), place1.getYPos(), place2.getXPos(), place2.getYPos());
+      connection.setStrokeWidth(connectionWidth);
+      mapHolder.getChildren().add(connection);
+      connection.toBack();
 
-        });
+    });
   }
   private void selectCircle(Circle c){
     if (selectedPlaces.contains(c)) {
