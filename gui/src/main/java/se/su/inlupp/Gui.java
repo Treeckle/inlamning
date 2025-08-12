@@ -24,26 +24,24 @@ public class Gui extends Application {
   private final int connectionWidth = 2;
   private HashMap<Circle, Location> locations = new HashMap<>();
   private ArrayList<Circle> selectedPlaces = new ArrayList<>();
+  Graph<Location> graph;
+  Pane mapHolder;
+  Button findPath;
+  Button showConnection;
+  Button newPlace;
+  Button newConnection;
+  Button changeConnection;
 
   public void start(Stage stage) {
-    Graph<Location> graph = new ListGraph<Location>();
+    graph = new ListGraph<>();
     stage.setResizable(false);
 
-    /*String javaVersion = System.getProperty("java.version");
-    String javafxVersion = System.getProperty("javafx.version");
-    Label label =
-        new Label("Hello, JavaFX " + javafxVersion + ", running on Java " + javaVersion + ".");
-
-    VBox root = new VBox(30, label);
-    root.setAlignment(Pos.CENTER);
-    Scene scene = new Scene(root, 640, 480);
-    stage.setScene(scene);
-    stage.show();*/
-
+    ButtonHandler buttonHandler = new ButtonHandler();
 
     BorderPane root = new BorderPane();
     VBox barHolder = new VBox();
-    Pane mapHolder = new Pane();
+    mapHolder = new Pane();
+
     //menu setup
     MenuBar menuBar = new MenuBar();
     Menu menu = new Menu("File");
@@ -69,8 +67,7 @@ public class Gui extends Application {
     maps.getItems().addAll(customMap, skyrim, borderlands2);
     menuBar.getMenus().add(menu);
 
-    //function for menu buttons
-
+    //function for menu items
     for(MenuItem m : templates.keySet() ) {
       m.setOnAction(event -> {
         mapHolder.setBackground(new Background(new BackgroundImage(templates.get(m), BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT, BackgroundPosition.CENTER, BackgroundSize.DEFAULT)));
@@ -82,12 +79,18 @@ public class Gui extends Application {
 
     //toolbar setup
     ToolBar toolBar = new ToolBar();
-    Button findPath = new Button("Find Path");
-    Button showConnection = new Button("Show Connection");
-    Button newPlace = new Button("New Place");
-    Button newConnection = new Button("New Connection");
-    Button changeConnection = new Button("Change Connection");
+    findPath = new Button("Find Path");
+    showConnection = new Button("Show Connection");
+    newPlace = new Button("New Place");
+    newConnection = new Button("New Connection");
+    changeConnection = new Button("Change Connection");
     toolBar.getItems().addAll(findPath, showConnection, newPlace, newConnection, changeConnection);
+
+    findPath.setOnAction(buttonHandler);
+    showConnection.setOnAction(buttonHandler);
+    newPlace.setOnAction(buttonHandler);
+    newConnection.setOnAction(buttonHandler);
+    changeConnection.setOnAction(buttonHandler);
 
     //footer setup
     HBox footer = new HBox();
@@ -105,19 +108,12 @@ public class Gui extends Application {
     stage.show();
     System.out.println("Working directory: " + System.getProperty("user.dir"));
 
-    //addPlace
 
-    newPlace.setOnAction(event -> {
-      MultiTextInputDialog dialog = new MultiTextInputDialog();
-      dialog.showAndWait();
-
-      placingLocation = true;
-    });
-
-    //sätt ut plats på klickade kordinater
+    //sätt ut plats på klickade kordinater om new place är vald
     mapHolder.setOnMouseClicked(event -> {
       if(placingLocation) {
         placingLocation = false;
+        newPlace.setDisable(false);
         TextInputDialog nameInput = new TextInputDialog();
         nameInput.setTitle("Name Input");
         nameInput.setContentText("Enter a name for the place");
@@ -136,31 +132,73 @@ public class Gui extends Application {
         mapHolder.getChildren().add(circle);
       }
     });
-
-    //set connection
-    newConnection.setOnAction(event -> {
-      if(selectedPlaces.size() < 2) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Error");
-        alert.setContentText("Please select at least two places");
-        alert.showAndWait();
-        return;
-      }
-      Location place1 = locations.get(selectedPlaces.get(0));
-      Location place2 = locations.get(selectedPlaces.get(1));
-
-      String name = "joe";
-
-      int weight = 5;
-      graph.connect(locations.get(selectedPlaces.get(0)), locations.get(selectedPlaces.get(1)), name, weight);
-
-      Line connection = new Line(place1.getXPos(), place1.getYPos(), place2.getXPos(), place2.getYPos());
-      connection.setStrokeWidth(connectionWidth);
-      mapHolder.getChildren().add(connection);
-      connection.toBack();
-
-    });
   }
+
+  private class ButtonHandler implements EventHandler<ActionEvent>{
+    public void handle(ActionEvent event) {
+
+      //new place
+      if (event.getSource() == newPlace){
+          placingLocation = true;
+          newPlace.setDisable(true);
+
+      }
+
+      //new connection
+      if(event.getSource() == newConnection){
+        if(!checkSelectedPlaces()) return;
+        ConnectionDialog connectionDialog = new ConnectionDialog();
+        connectionDialog.showAndWait();
+        if(connectionDialog.getResult() == null) return;
+        String[] split = connectionDialog.getResult().split(";");
+        connectPlaces(split[0], Integer.parseInt(split[1]));
+      }
+
+      //Change connection
+      if(event.getSource() == changeConnection){
+        if(!checkSelectedPlaces()) return;
+        String connectionName = graph.getEdgeBetween(locations.get(selectedPlaces.get(0)), locations.get(selectedPlaces.get(1))).getName();
+        ConnectionDialog connectionDialog = new ConnectionDialog(connectionName);
+        connectionDialog.showAndWait();
+        if(connectionDialog.getResult() == null) return;
+        graph.setConnectionWeight(locations.get(selectedPlaces.get(0)), locations.get(selectedPlaces.get(1)), Integer.parseInt(connectionDialog.getResult()));
+      }
+
+      if(event.getSource() == showConnection){
+        if(!checkSelectedPlaces()) return;
+        Edge<Location> connection = graph.getEdgeBetween(locations.get(selectedPlaces.get(0)), locations.get(selectedPlaces.get(1)));
+        ConnectionDialog connectionDialog = new ConnectionDialog(locations.get(selectedPlaces.get(0)).getName(),connection);
+        connectionDialog.showAndWait();
+      }
+    }
+  }
+
+
+
+  private void connectPlaces(String name, int weight){
+    Location place1 = locations.get(selectedPlaces.get(0));
+    Location place2 = locations.get(selectedPlaces.get(1));
+
+    graph.connect(locations.get(selectedPlaces.get(0)), locations.get(selectedPlaces.get(1)), name, weight);
+
+    Line connection = new Line(place1.getXPos(), place1.getYPos(), place2.getXPos(), place2.getYPos());
+    connection.setStrokeWidth(connectionWidth);
+    mapHolder.getChildren().add(connection);
+    connection.toBack();
+  }
+
+
+  private boolean checkSelectedPlaces() {
+    if(selectedPlaces.size() < 2) {
+      Alert alert = new Alert(Alert.AlertType.ERROR);
+      alert.setTitle("Error");
+      alert.setContentText("Please select at least two places");
+      alert.showAndWait();
+      return false;
+    }
+    return true;
+  }
+
   private void selectCircle(Circle c){
     if (selectedPlaces.contains(c)) {
       c.setFill(Color.BLUE);
