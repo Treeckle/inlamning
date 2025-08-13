@@ -1,19 +1,15 @@
 TODO
 
 BIG SHIT
-göra att man kan välja en bild som ska bli kartan från sina filer
 
-knappar
+
 spara karta
-spara BILD af karta
 exit funktion
-skapa Connections mellan noder
-ändra Connections mellan noder
+popup om saker inte är sparade
 
 
 
 
 Slightly smaller shit
 
-Gör musen till ett plus när man sätter ut en plats
 ge platser en label på kartan

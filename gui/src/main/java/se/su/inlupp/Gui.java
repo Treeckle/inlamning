@@ -1,20 +1,29 @@
 package se.su.inlupp;
 
 import javafx.application.Application;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
+import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 
 public class Gui extends Application {
@@ -55,6 +64,7 @@ public class Gui extends Application {
     MenuItem skyrim = new MenuItem("Skyrim");
     MenuItem borderlands2 = new MenuItem("Borderlands 2");
 
+    Image customImage;
     Image skyrimMap = new Image("file:../assets/maps/templates/skyrimMap.png");
     Image borderlands2Map = new Image("file:../assets/maps/templates/borderlands2Map.png");
 
@@ -75,6 +85,29 @@ public class Gui extends Application {
         stage.sizeToScene();
       });
     }
+    customMap.setOnAction(event -> {
+      FileChooser fileChooser = new FileChooser();
+      File file = fileChooser.showOpenDialog(stage);
+      if(file == null) return;
+      Image image = new Image(file.toURI().toString());
+      if (image.isError()) return;
+      mapHolder.setBackground(new Background(new BackgroundImage(image, BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT, BackgroundPosition.CENTER, BackgroundSize.DEFAULT)));
+      mapHolder.setPrefSize(image.getWidth(), image.getHeight());
+      stage.sizeToScene();
+    });
+    saveImage.setOnAction(event -> {
+      try{
+        WritableImage image = mapHolder.snapshot(null, null);
+        BufferedImage bufferedImage = SwingFXUtils.fromFXImage(image, null);
+        ImageIO.write(bufferedImage, "png", new File("capture.png"));
+      } catch(IOException e){
+        Alert alert = new Alert(Alert.AlertType.ERROR, "IO exception");
+        alert.showAndWait();
+      }
+
+
+
+    });
 
 
     //toolbar setup
@@ -112,13 +145,19 @@ public class Gui extends Application {
     //sätt ut plats på klickade kordinater om new place är vald
     mapHolder.setOnMouseClicked(event -> {
       if(placingLocation) {
+        mapHolder.setCursor(Cursor.DEFAULT);
         placingLocation = false;
         newPlace.setDisable(false);
+
         TextInputDialog nameInput = new TextInputDialog();
         nameInput.setTitle("Name Input");
         nameInput.setContentText("Enter a name for the place");
-        Optional<String> result = nameInput.showAndWait();
-        if(result.isEmpty()) return;
+        nameInput.showAndWait();
+        if(nameInput.getResult().isEmpty()){
+          error("No name entered");
+          return;
+        }
+
         String name = nameInput.getResult();
         Location place = new Location(name, event.getX(), event.getY());
         graph.add(place);
@@ -139,6 +178,7 @@ public class Gui extends Application {
 
       //new place
       if (event.getSource() == newPlace){
+          mapHolder.setCursor(Cursor.CROSSHAIR);
           placingLocation = true;
           newPlace.setDisable(true);
 
@@ -152,6 +192,7 @@ public class Gui extends Application {
         if(connectionDialog.getResult() == null) return;
         String[] split = connectionDialog.getResult().split(";");
         connectPlaces(split[0], Integer.parseInt(split[1]));
+        unselectAll();
       }
 
       //Change connection
@@ -162,18 +203,39 @@ public class Gui extends Application {
         connectionDialog.showAndWait();
         if(connectionDialog.getResult() == null) return;
         graph.setConnectionWeight(locations.get(selectedPlaces.get(0)), locations.get(selectedPlaces.get(1)), Integer.parseInt(connectionDialog.getResult()));
+        unselectAll();
       }
 
       if(event.getSource() == showConnection){
         if(!checkSelectedPlaces()) return;
         Edge<Location> connection = graph.getEdgeBetween(locations.get(selectedPlaces.get(0)), locations.get(selectedPlaces.get(1)));
-        ConnectionDialog connectionDialog = new ConnectionDialog(locations.get(selectedPlaces.get(0)).getName(),connection);
+        ConnectionDialog connectionDialog = new ConnectionDialog(locations.get(selectedPlaces.get(0)).toString(),connection);
         connectionDialog.showAndWait();
+        unselectAll();
+      }
+
+      if(event.getSource() == findPath){
+        if(!checkSelectedPlaces()) return;
+        List<Edge<Location>> path = graph.getPath(locations.get(selectedPlaces.get(0)), locations.get(selectedPlaces.get(1)));
+        String pathString = "";
+        int totalTime = 0;
+        Alert pathAlert = new Alert(Alert.AlertType.INFORMATION);
+        pathAlert.setHeaderText("The path from " + locations.get(selectedPlaces.get(0)).toString() + " to " + locations.get(selectedPlaces.get(1)).toString() + ":");
+        for(Edge<Location> edge : path){
+          totalTime += edge.getWeight();
+          pathString += edge.toString() + "\n";
+        }
+        pathAlert.setContentText(pathString + "\nTotal time: " + totalTime);
+        pathAlert.showAndWait();
+        unselectAll();
       }
     }
   }
+  private class menuHandler implements EventHandler<ActionEvent>{
+    public void handle(ActionEvent event) {
 
-
+    }
+  }
 
   private void connectPlaces(String name, int weight){
     Location place1 = locations.get(selectedPlaces.get(0));
@@ -187,16 +249,24 @@ public class Gui extends Application {
     connection.toBack();
   }
 
-
+  private void unselectAll(){
+    for(Circle c : selectedPlaces){
+      c.setFill(Color.BLUE);
+    }
+    selectedPlaces.clear();
+  }
   private boolean checkSelectedPlaces() {
     if(selectedPlaces.size() < 2) {
-      Alert alert = new Alert(Alert.AlertType.ERROR);
-      alert.setTitle("Error");
-      alert.setContentText("Please select at least two places");
-      alert.showAndWait();
+      error("Please select at least two places");
       return false;
     }
     return true;
+  }
+  private void error(String message){
+    Alert alert = new Alert(Alert.AlertType.ERROR);
+    alert.setTitle("Error");
+    alert.setContentText(message);
+    alert.showAndWait();
   }
 
   private void selectCircle(Circle c){

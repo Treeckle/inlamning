@@ -9,8 +9,7 @@ public class Location {
         xPos = x;
         yPos = y;
     }
-    public String getName() {return name;}
     public double getXPos() {return xPos;}
     public double getYPos() {return yPos;}
-    public String toString() {return name + " " + xPos + " " + yPos;}
+    public String toString() {return name;}
 }
