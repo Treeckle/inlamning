@@ -3,7 +3,6 @@ TODO
 BIG SHIT
 
 
-spara karta
 exit funktion
 popup om saker inte är sparade
 

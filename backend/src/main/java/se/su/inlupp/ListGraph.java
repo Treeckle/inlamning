@@ -1,8 +1,10 @@
 package se.su.inlupp;
 
+import java.io.Serializable;
 import java.util.*;
 
-public class ListGraph<T> implements Graph<T> {
+public class ListGraph<T> implements Graph<T>, Serializable {
+  private static final long serialVersionUID = 1L;
 
   private Map<T, Set<Edge<T>>> nodes = new HashMap<>();
   @Override

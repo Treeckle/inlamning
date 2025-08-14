@@ -4,42 +4,51 @@ import javafx.application.Application;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.Cursor;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
-import javafx.scene.text.Text;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
+import javafx.util.Pair;
 
 import javax.imageio.ImageIO;
+import javax.swing.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 
 public class Gui extends Application {
 
   private boolean placingLocation = false;
+  private boolean changes = false;
   private final int nodeRadius = 10;
   private final int connectionWidth = 2;
   private HashMap<Circle, Location> locations = new HashMap<>();
   private ArrayList<Circle> selectedPlaces = new ArrayList<>();
-  Graph<Location> graph;
-  Pane mapHolder;
-  Button findPath;
-  Button showConnection;
-  Button newPlace;
-  Button newConnection;
-  Button changeConnection;
+  private ArrayList<Pair<Location, Location>> edges = new ArrayList<>();
+  private Graph<Location> graph;
+  private Pane mapHolder;
+  private ToolBar toolBar;
+  private Button findPath;
+  private Button showConnection;
+  private Button newPlace;
+  private Button newConnection;
+  private Button changeConnection;
+
+  private String fileName = null;
+  private String backgroundImagePath = null;
+
 
   public void start(Stage stage) {
     graph = new ListGraph<>();
@@ -51,12 +60,15 @@ public class Gui extends Application {
     VBox barHolder = new VBox();
     mapHolder = new Pane();
 
+
+
     //menu setup
     MenuBar menuBar = new MenuBar();
     Menu menu = new Menu("File");
     Menu maps = new Menu("New Map");
     MenuItem open = new MenuItem("Open");
     MenuItem save = new MenuItem("Save");
+    MenuItem saveAs = new MenuItem("Save As");
     MenuItem saveImage = new MenuItem("Save Image");
     MenuItem exit = new MenuItem("Exit");
 
@@ -73,19 +85,33 @@ public class Gui extends Application {
     templates.putIfAbsent(borderlands2, borderlands2Map);
 
 
-    menu.getItems().addAll(maps, open, save, saveImage, exit);
+    menu.getItems().addAll(maps, open, save, saveAs, saveImage, exit);
     maps.getItems().addAll(customMap, skyrim, borderlands2);
     menuBar.getMenus().add(menu);
 
+    stage.setOnCloseRequest(event -> {
+      event.consume();
+      exitProgram();
+    });
     //function for menu items
     for(MenuItem m : templates.keySet() ) {
       m.setOnAction(event -> {
+        unsavedChanges();
+        reset();
+        backgroundImagePath = templates.get(m).getUrl();
         mapHolder.setBackground(new Background(new BackgroundImage(templates.get(m), BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT, BackgroundPosition.CENTER, BackgroundSize.DEFAULT)));
         mapHolder.setPrefSize(templates.get(m).getWidth(), templates.get(m).getHeight());
         stage.sizeToScene();
+        for(Node n : toolBar.getItems()) {
+          if (n instanceof Button b) {
+            b.setDisable(false);
+          }
+        }
       });
     }
     customMap.setOnAction(event -> {
+      unsavedChanges();
+      reset();
       FileChooser fileChooser = new FileChooser();
       File file = fileChooser.showOpenDialog(stage);
       if(file == null) return;
@@ -94,6 +120,11 @@ public class Gui extends Application {
       mapHolder.setBackground(new Background(new BackgroundImage(image, BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT, BackgroundPosition.CENTER, BackgroundSize.DEFAULT)));
       mapHolder.setPrefSize(image.getWidth(), image.getHeight());
       stage.sizeToScene();
+      for(Node n : toolBar.getItems()) {
+        if (n instanceof Button b) {
+          b.setDisable(false);
+        }
+      }
     });
     saveImage.setOnAction(event -> {
       try{
@@ -104,20 +135,91 @@ public class Gui extends Application {
         Alert alert = new Alert(Alert.AlertType.ERROR, "IO exception");
         alert.showAndWait();
       }
+    });
 
+    save.setOnAction(event -> {
+      save();
+    });
+    saveAs.setOnAction(event -> {
+      saveAs();
+    });
 
+    open.setOnAction(event -> {
+      FileChooser fileChooser = new FileChooser();
+      FileInputStream fileInputStream;
+      File file = fileChooser.showOpenDialog(stage);
+      if(file == null) return;
+      if(file.getName().endsWith(".graph")) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setHeaderText("Selected file is not a graph file.");
+      }
+      unsavedChanges();
+      try {
+        fileInputStream = new FileInputStream(file.getAbsolutePath());
+        ObjectInputStream ois = new ObjectInputStream(fileInputStream);
+        reset();
+        Image background = new Image((String) ois.readObject());
+        graph = (ListGraph<Location>) ois.readObject();
+        edges = (ArrayList<Pair<Location, Location>>) ois.readObject();
+        mapHolder.setBackground(new Background(new BackgroundImage(background, BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT, BackgroundPosition.CENTER, BackgroundSize.DEFAULT)));
+        mapHolder.setPrefSize(background.getWidth(), background.getHeight());
+        for(Location l : graph.getNodes()) {
+          Circle c = new Circle(l.getXPos(), l.getYPos(), nodeRadius, Color.BLUE);
+          locations.putIfAbsent(c, l);
+          Label label = new Label(l.toString());
+          label.setFont(Font.font("System", FontWeight.BOLD, 14));
+          label.relocate(l.getXPos()-nodeRadius, l.getYPos()+nodeRadius);
 
+          c.setOnMouseClicked(mouseEvent -> {
+            selectCircle(c);
+          });
+          mapHolder.getChildren().addAll(c, label);
+          label.toBack();
+
+        }
+        for(Pair<Location, Location> pair : edges) {
+          Line l = new Line(pair.getKey().getXPos(), pair.getKey().getYPos(), pair.getValue().getXPos(), pair.getValue().getYPos());
+          l.setStrokeWidth(connectionWidth);
+          mapHolder.getChildren().add(l);
+        }
+        for(Node n : toolBar.getItems()) {
+          if (n instanceof Button b) {
+            b.setDisable(false);
+          }
+        }
+        stage.sizeToScene();
+
+      }catch (ClassNotFoundException e) {
+        System.err.println("Class not found");
+      }catch (FileNotFoundException e) {
+        System.err.println("File could not be opened");
+
+      }catch (IOException e) {
+        System.err.println("IO Exception occured");
+      }
+
+    });
+
+    exit.setOnAction(event -> {
+      stage.fireEvent(
+              new WindowEvent(stage, WindowEvent.WINDOW_CLOSE_REQUEST)
+      );
     });
 
 
     //toolbar setup
-    ToolBar toolBar = new ToolBar();
+    toolBar = new ToolBar();
     findPath = new Button("Find Path");
     showConnection = new Button("Show Connection");
     newPlace = new Button("New Place");
     newConnection = new Button("New Connection");
     changeConnection = new Button("Change Connection");
     toolBar.getItems().addAll(findPath, showConnection, newPlace, newConnection, changeConnection);
+    for(Node n : toolBar.getItems()){
+      if(n instanceof Button b){
+        b.setDisable(true);
+      }
+    }
 
     findPath.setOnAction(buttonHandler);
     showConnection.setOnAction(buttonHandler);
@@ -129,7 +231,6 @@ public class Gui extends Application {
     HBox footer = new HBox();
     Label action = new Label("Actions from the user will potentially be displayed here");
 
-    //set up the full borderPane
     barHolder.getChildren().addAll(menuBar, toolBar);
     root.setTop(barHolder);
     root.setCenter(mapHolder);
@@ -151,6 +252,7 @@ public class Gui extends Application {
 
         TextInputDialog nameInput = new TextInputDialog();
         nameInput.setTitle("Name Input");
+        nameInput.setHeaderText("New Place");
         nameInput.setContentText("Enter a name for the place");
         nameInput.showAndWait();
         if(nameInput.getResult().isEmpty()){
@@ -164,11 +266,15 @@ public class Gui extends Application {
         System.out.println(graph.getNodes());
         Circle circle = new Circle(event.getX(), event.getY(), nodeRadius, Color.BLUE);
         locations.putIfAbsent(circle, place);
+        Label label = new Label(name);
+        label.setFont(Font.font("System", FontWeight.BOLD, 14));
+        label.relocate(event.getX()-nodeRadius, event.getY()+nodeRadius);
 
         circle.setOnMouseClicked(mouseEvent -> {
         selectCircle(circle);
         });
-        mapHolder.getChildren().add(circle);
+        mapHolder.getChildren().addAll(circle, label);
+        changes = true;
       }
     });
   }
@@ -178,9 +284,9 @@ public class Gui extends Application {
 
       //new place
       if (event.getSource() == newPlace){
-          mapHolder.setCursor(Cursor.CROSSHAIR);
-          placingLocation = true;
-          newPlace.setDisable(true);
+        mapHolder.setCursor(Cursor.CROSSHAIR);
+        placingLocation = true;
+        newPlace.setDisable(true);
 
       }
 
@@ -193,6 +299,7 @@ public class Gui extends Application {
         String[] split = connectionDialog.getResult().split(";");
         connectPlaces(split[0], Integer.parseInt(split[1]));
         unselectAll();
+        changes = true;
       }
 
       //Change connection
@@ -204,6 +311,7 @@ public class Gui extends Application {
         if(connectionDialog.getResult() == null) return;
         graph.setConnectionWeight(locations.get(selectedPlaces.get(0)), locations.get(selectedPlaces.get(1)), Integer.parseInt(connectionDialog.getResult()));
         unselectAll();
+        changes = true;
       }
 
       if(event.getSource() == showConnection){
@@ -214,14 +322,14 @@ public class Gui extends Application {
         unselectAll();
       }
 
-      if(event.getSource() == findPath){
-        if(!checkSelectedPlaces()) return;
+      if(event.getSource() == findPath) {
+        if (!checkSelectedPlaces()) return;
         List<Edge<Location>> path = graph.getPath(locations.get(selectedPlaces.get(0)), locations.get(selectedPlaces.get(1)));
         String pathString = "";
         int totalTime = 0;
         Alert pathAlert = new Alert(Alert.AlertType.INFORMATION);
         pathAlert.setHeaderText("The path from " + locations.get(selectedPlaces.get(0)).toString() + " to " + locations.get(selectedPlaces.get(1)).toString() + ":");
-        for(Edge<Location> edge : path){
+        for (Edge<Location> edge : path) {
           totalTime += edge.getWeight();
           pathString += edge.toString() + "\n";
         }
@@ -231,18 +339,14 @@ public class Gui extends Application {
       }
     }
   }
-  private class menuHandler implements EventHandler<ActionEvent>{
-    public void handle(ActionEvent event) {
 
-    }
-  }
 
   private void connectPlaces(String name, int weight){
     Location place1 = locations.get(selectedPlaces.get(0));
     Location place2 = locations.get(selectedPlaces.get(1));
 
     graph.connect(locations.get(selectedPlaces.get(0)), locations.get(selectedPlaces.get(1)), name, weight);
-
+    edges.add(new Pair<>(place1, place2));
     Line connection = new Line(place1.getXPos(), place1.getYPos(), place2.getXPos(), place2.getYPos());
     connection.setStrokeWidth(connectionWidth);
     mapHolder.getChildren().add(connection);
@@ -280,7 +384,73 @@ public class Gui extends Application {
     }
   }
 
+  private void unsavedChanges(){
+    if (!changes) return;
+    Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+    alert.setHeaderText("You have unsaved changes, would you like to save changes?");
+    System.out.println(alert.showAndWait());
+    if (alert.getResult() == ButtonType.OK){
+      save();
+    }
+  }
+
+  private void save(){
+
+      if (fileName == null) {
+        pickSaveLocation();
+      }
+
+      try{
+      FileOutputStream file = new FileOutputStream(fileName);
+      ObjectOutputStream oos = new ObjectOutputStream(file);
+      unselectAll();
+
+      oos.writeObject(backgroundImagePath);
+      oos.writeObject(graph);
+      oos.writeObject(edges);
+      //oos.writeObject(savedLocations);
+    }catch (FileNotFoundException e){
+      System.out.println(e);
+    }catch (IOException e){
+      System.out.println(e);
+    }
+  }
+
+  private void pickSaveLocation(){
+    FileChooser filechooser = new FileChooser();
+    File file = filechooser.showSaveDialog(mapHolder.getScene().getWindow());
+    if (file == null){
+      throw new IllegalStateException("Save failed");
+    }
+    if(!file.getName().endsWith(".graph")){
+      String[] name = file.getAbsolutePath().split("\\.");
+      file = new File(name[0] + ".graph");
+    }
+    fileName = file.getAbsolutePath();
+  }
+
+  private void saveAs(){
+    pickSaveLocation();
+    save();
+  }
+  private void exitProgram(){
+    unsavedChanges();
+    System.exit(0);
+  }
+
+  public void reset(){
+    graph = new ListGraph<Location>();
+    edges.clear();
+    selectedPlaces.clear();
+    changes = false;
+    mapHolder.getChildren().clear();
+    fileName = null;
+    backgroundImagePath = null;
+
+  }
   public static void main(String[] args) {
     launch(args);
   }
+
+
 }

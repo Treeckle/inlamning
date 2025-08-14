@@ -1,6 +1,9 @@
 package se.su.inlupp;
 
-public class Edge<T> {
+import java.io.Serializable;
+
+public class Edge<T> implements Serializable {
+  private static final long serialVersionUID = 1L;
 
   private int weight;
   private final T destination;
