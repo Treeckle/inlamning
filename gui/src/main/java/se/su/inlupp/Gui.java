@@ -1,3 +1,6 @@
+//Prog2 VT2025, Inlämningsuppgift, del 2
+//Grupp 361
+//Jamal Cabanos jaca9541
 package se.su.inlupp;
 
 import javafx.application.Application;
@@ -9,7 +12,6 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
@@ -21,9 +23,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import javafx.util.Pair;
-
 import javax.imageio.ImageIO;
-import javax.swing.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.*;
@@ -77,8 +77,8 @@ public class Gui extends Application {
     MenuItem borderlands2 = new MenuItem("Borderlands 2");
 
     Image customImage;
-    Image skyrimMap = new Image("file:../assets/maps/templates/skyrimMap.png");
-    Image borderlands2Map = new Image("file:../assets/maps/templates/borderlands2Map.png");
+    Image skyrimMap = new Image("file:assets/maps/templates/skyrimMap.png");
+    Image borderlands2Map = new Image("file:assets/maps/templates/borderlands2Map.png");
 
     HashMap<MenuItem, Image> templates = new HashMap<MenuItem, Image>();
     templates.putIfAbsent(skyrim, skyrimMap);
@@ -410,9 +410,9 @@ public class Gui extends Application {
       oos.writeObject(edges);
       //oos.writeObject(savedLocations);
     }catch (FileNotFoundException e){
-      System.out.println(e);
+      System.err.println("File could not be found");
     }catch (IOException e){
-      System.out.println(e);
+      System.err.println("IOException occured");
     }
   }
 

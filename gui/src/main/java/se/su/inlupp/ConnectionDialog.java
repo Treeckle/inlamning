@@ -1,3 +1,6 @@
+//Prog2 VT2025, Inlämningsuppgift, del 2
+//Grupp 361
+//Jamal Cabanos jaca9541
 package se.su.inlupp;
 
 import javafx.event.ActionEvent;
@@ -22,8 +25,6 @@ public class ConnectionDialog extends Dialog<String> {
         timeField.setEditable(false);
         createLayout();
         finishDialog();
-
-
 
     }
     public ConnectionDialog(String connectionName) {

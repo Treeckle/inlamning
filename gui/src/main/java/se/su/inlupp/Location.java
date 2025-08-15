@@ -1,3 +1,6 @@
+//Prog2 VT2025, Inlämningsuppgift, del 2
+//Grupp 361
+//Jamal Cabanos jaca9541
 package se.su.inlupp;
 
 import java.io.Serializable;
